@@ -10,7 +10,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAfx78JhLPW5D2rvasQjWObB4mSEFAemcQ",
@@ -40,7 +40,11 @@
       orderBy,
       deleteDoc,
       doc,
-      updateDoc
+      updateDoc,
+      arrayUnion,
+      arrayRemove,
+      getDoc,
+      setDoc
     };
   </script>
 
@@ -89,7 +93,7 @@
 
     .fade-in { animation: fadeIn 0.4s ease forwards; }
 
-    /* Header Spettacolare */
+    /* Header */
     .site-header {
       background: rgba(12, 16, 20, 0.85);
       backdrop-filter: blur(16px);
@@ -107,6 +111,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 1.5rem;
     }
     .logo {
       display: flex;
@@ -117,24 +122,53 @@
       font-weight: 900;
       text-decoration: none;
       letter-spacing: -0.5px;
-      transition: var(--transition);
+      flex-shrink: 0;
     }
-    .logo:hover { transform: scale(1.02); }
     .logo span { color: var(--text); font-weight: 400; }
     .logo-dots { display: flex; gap: 5px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; transition: var(--transition); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .dot.green { background: var(--green); box-shadow: 0 0 10px var(--green-glow); }
-    .dot.orange { background: var(--orange); box-shadow: 0 0 10px rgba(255, 128, 0, 0.4); }
-    .dot.blue { background: var(--blue); box-shadow: 0 0 10px var(--blue-glow); }
+    .dot.orange { background: var(--orange); }
+    .dot.blue { background: var(--blue); }
 
-    .main-nav { display: flex; align-items: center; gap: 2rem; }
+    /* Barra di Ricerca Globale Header */
+    .global-search-bar {
+      flex-grow: 1;
+      max-width: 400px;
+      position: relative;
+    }
+    .global-search-bar input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.5rem 1rem 0.5rem 2.4rem;
+      color: var(--text-white);
+      font-size: 0.85rem;
+      transition: var(--transition);
+    }
+    .global-search-bar input:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 15px var(--green-glow);
+    }
+    .global-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .main-nav { display: flex; align-items: center; gap: 1.5rem; flex-shrink: 0; }
     .nav-link {
       color: var(--text);
       text-decoration: none;
       font-weight: 600;
       font-size: 0.85rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
       background: none;
       border: none;
       cursor: pointer;
@@ -142,38 +176,22 @@
       padding: 0.5rem 0;
       transition: var(--transition);
     }
-    .nav-link::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 0;
-      height: 2px;
-      background: var(--green);
-      transition: var(--transition);
-      border-radius: 2px;
-    }
-    .nav-link:hover { color: var(--text-white); }
-    .nav-link:hover::after, .nav-link.active::after { width: 100%; }
-    .nav-link.active { color: var(--text-white); }
+    .nav-link:hover, .nav-link.active { color: var(--text-white); }
 
-    .header-actions { display: flex; align-items: center; gap: 1.2rem; }
+    .header-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
     .btn-log {
       background: linear-gradient(135deg, #00e054 0%, #00a841 100%);
       color: #05140a;
       border: none;
       border-radius: 30px;
-      padding: 0.6rem 1.4rem;
+      padding: 0.5rem 1.2rem;
       font-weight: 800;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       cursor: pointer;
       box-shadow: 0 4px 20px var(--green-glow);
       transition: var(--transition);
     }
-    .btn-log:hover {
-      transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 6px 25px rgba(0, 224, 84, 0.6);
-    }
+    .btn-log:hover { transform: translateY(-2px); }
     
     .user-badge {
       font-size: 0.8rem;
@@ -188,22 +206,17 @@
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       color: var(--text-white);
-      padding: 0.5rem 1.1rem;
+      padding: 0.4rem 1rem;
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.85rem;
       font-weight: 600;
-      transition: var(--transition);
     }
-    .btn-auth-nav:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--border-hover);
-      transform: translateY(-2px);
-    }
+    .btn-auth-nav:hover { border-color: var(--border-hover); }
 
     .container { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem; }
 
-    /* Hero Spettacolare */
+    /* Hero */
     .hero-stats {
       display: grid;
       grid-template-columns: 2fr 1fr;
@@ -215,21 +228,8 @@
       margin-bottom: 3.5rem;
       align-items: center;
       box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      position: relative;
-      overflow: hidden;
     }
-    .hero-stats::before {
-      content: '';
-      position: absolute;
-      top: -50px;
-      right: -50px;
-      width: 250px;
-      height: 250px;
-      background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
-      opacity: 0.5;
-      pointer-events: none;
-    }
-    .hero-text h1 { color: var(--text-white); font-size: 2.5rem; line-height: 1.15; margin-bottom: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+    .hero-text h1 { color: var(--text-white); font-size: 2.5rem; line-height: 1.15; margin-bottom: 1.2rem; font-weight: 800; }
     .hero-text h1 span { color: var(--green); text-shadow: 0 0 30px var(--green-glow); }
     .hero-text p { font-size: 1.1rem; margin-bottom: 2rem; color: var(--text); }
     
@@ -243,14 +243,13 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 1.5rem;
       text-align: center;
-      box-shadow: inset 0 2px 5px rgba(255,255,255,0.02);
     }
-    .stat-item .number { color: var(--text-white); font-size: 2.2rem; font-weight: 900; display: block; letter-spacing: -1px; }
+    .stat-item .number { color: var(--text-white); font-size: 2.2rem; font-weight: 900; display: block; }
     .stat-item .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text); letter-spacing: 1px; margin-top: 0.3rem; }
 
-    /* Caroselli Orizzontali Spettacolari */
+    /* Caroselli Orizzontali */
     .catalog-section { margin-bottom: 3.5rem; }
-    .catalog-title { color: var(--text-white); font-size: 1.4rem; font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 10px; letter-spacing: -0.3px; }
+    .catalog-title { color: var(--text-white); font-size: 1.4rem; font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 10px; }
     
     .horizontal-scroll-container {
       display: flex;
@@ -274,18 +273,13 @@
       box-shadow: 0 10px 20px rgba(0,0,0,0.3);
       transition: var(--transition);
     }
-    .tmdb-card:hover {
-      transform: translateY(-8px) scale(1.02);
-      border-color: var(--green);
-      box-shadow: 0 15px 30px rgba(0, 224, 84, 0.15);
-    }
-    .tmdb-card img { width: 100%; height: 260px; object-fit: cover; transition: var(--transition); }
-    .tmdb-card:hover img { filter: brightness(1.05); }
+    .tmdb-card:hover { transform: translateY(-8px) scale(1.02); border-color: var(--green); }
+    .tmdb-card img { width: 100%; height: 260px; object-fit: cover; }
     .tmdb-card-info { padding: 0.8rem; background: var(--surface); }
     .tmdb-card-title { color: var(--text-white); font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tmdb-card-meta { font-size: 0.75rem; color: var(--text); display: flex; justify-content: space-between; margin-top: 0.3rem; font-weight: 600; }
 
-    /* Sezione Profilo (Sub-tab) */
+    /* Profilo */
     .profile-tabs {
       display: flex;
       gap: 1.2rem;
@@ -304,19 +298,10 @@
       cursor: pointer;
       transition: var(--transition);
     }
-    .profile-tab-btn:hover {
-      background: var(--surface-light);
-      color: var(--text-white);
-      border-color: var(--border-hover);
-    }
-    .profile-tab-btn.active {
-      background: var(--green);
-      color: #05140a;
-      border-color: var(--green);
-      box-shadow: 0 4px 15px var(--green-glow);
-    }
+    .profile-tab-btn:hover { background: var(--surface-light); color: var(--text-white); }
+    .profile-tab-btn.active { background: var(--green); color: #05140a; border-color: var(--green); box-shadow: 0 4px 15px var(--green-glow); }
 
-    /* Griglie e Diario */
+    /* Feed Social */
     .section-header {
       display: flex;
       justify-content: space-between;
@@ -325,7 +310,57 @@
       border-bottom: 1px solid var(--border);
       padding-bottom: 1rem;
     }
-    .section-header h2 { color: var(--text-white); font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+    .section-header h2 { color: var(--text-white); font-size: 1.8rem; font-weight: 800; }
+
+    .feed-list { display: flex; flex-direction: column; gap: 1.5rem; max-width: 800px; margin: 0 auto; }
+    .feed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .feed-poster { width: 90px; height: 130px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .feed-content { flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .feed-author-bar { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--blue); font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+    .feed-author-bar span { cursor: pointer; }
+    .feed-author-bar span:hover { text-decoration: underline; color: var(--text-white); }
+    .feed-movie-title { color: var(--text-white); font-size: 1.2rem; font-weight: 900; }
+    .feed-review-text { font-size: 0.95rem; color: var(--text-white); margin-top: 0.2rem; }
+    
+    .social-actions { display: flex; align-items: center; gap: 1.5rem; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: 0.85rem; }
+    .action-btn { background: none; border: none; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; transition: var(--transition); }
+    .action-btn:hover { color: var(--text-white); }
+    .action-btn.liked { color: var(--red); }
+
+    .comments-section { margin-top: 0.8rem; background: var(--bg); padding: 1rem; border-radius: 10px; border: 1px solid var(--border); display: none; }
+    .comments-section.open { display: block; }
+    .comment-item { font-size: 0.85rem; margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 0.4rem; }
+    .comment-item strong { color: var(--blue); }
+    .comment-form { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+    .comment-input { flex-grow: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; color: var(--text-white); font-size: 0.85rem; }
+    .comment-submit { background: var(--green); color: #05140a; border: none; padding: 0.4rem 0.9rem; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.8rem; }
+
+    /* Diario e Watchlist */
+    .diary-list { display: flex; flex-direction: column; gap: 1.2rem; }
+    .diary-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      gap: 1.8rem;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+    .diary-poster { width: 85px; height: 120px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .diary-content { flex-grow: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+    .diary-date-badge { font-size: 0.75rem; background: rgba(64, 188, 244, 0.1); color: var(--blue); padding: 0.3rem 0.8rem; border-radius: 6px; width: fit-content; border: 1px solid rgba(64, 188, 244, 0.25); font-weight: 700; }
+    .diary-title { color: var(--text-white); font-size: 1.2rem; font-weight: 900; }
+    .btn-delete { background: rgba(255, 71, 87, 0.1); color: var(--red); border: 1px solid rgba(255, 71, 87, 0.3); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+    .btn-delete:hover { background: var(--red); color: white; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1.8rem; }
     .movie-card {
@@ -337,48 +372,13 @@
       flex-direction: column;
       position: relative;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      transition: var(--transition);
     }
-    .movie-card:hover {
-      transform: translateY(-8px);
-      border-color: var(--blue);
-      box-shadow: 0 15px 35px rgba(64, 188, 244, 0.15);
-    }
-    .poster-img { width: 100%; height: 320px; object-fit: cover; transition: var(--transition); }
-    .movie-card:hover .poster-img { filter: brightness(1.05); }
+    .poster-img { width: 100%; height: 320px; object-fit: cover; }
     .movie-info { padding: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; flex-grow: 1; background: var(--surface); }
     .movie-title { color: var(--text-white); font-size: 1.05rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .movie-rating { color: var(--green); font-size: 0.9rem; font-weight: 700; text-shadow: 0 0 10px var(--green-glow); }
-    .movie-review-snippet { font-size: 0.85rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .movie-author { font-size: 0.75rem; color: var(--blue); margin-top: auto; padding-top: 0.8rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
 
-    /* Diario Personale Spettacolare */
-    .diary-list { display: flex; flex-direction: column; gap: 1.2rem; }
-    .diary-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      display: flex;
-      gap: 1.8rem;
-      align-items: center;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-      transition: var(--transition);
-    }
-    .diary-item:hover {
-      border-color: var(--green);
-      transform: translateX(4px);
-      box-shadow: 0 12px 30px rgba(0, 224, 84, 0.1);
-    }
-    .diary-poster { width: 85px; height: 120px; object-fit: cover; border-radius: 8px; flex-shrink: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-    .diary-content { flex-grow: 1; display: flex; flex-direction: column; gap: 0.4rem; }
-    .diary-date-badge { font-size: 0.75rem; background: rgba(64, 188, 244, 0.1); color: var(--blue); padding: 0.3rem 0.8rem; border-radius: 6px; width: fit-content; border: 1px solid rgba(64, 188, 244, 0.25); font-weight: 700; }
-    .diary-title { color: var(--text-white); font-size: 1.2rem; font-weight: 900; letter-spacing: -0.3px; }
-    .diary-review { font-size: 0.95rem; color: var(--text); margin-top: 0.4rem; }
-    .btn-delete { background: rgba(255, 71, 87, 0.1); color: var(--red); border: 1px solid rgba(255, 71, 87, 0.3); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700; transition: var(--transition); }
-    .btn-delete:hover { background: var(--red); color: white; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); transform: translateY(-2px); }
-
-    /* Modali con Effetto Vetro Spettacolare */
+    /* Modali */
     dialog {
       background: var(--surface-light);
       color: var(--text-white);
@@ -388,14 +388,12 @@
       width: min(560px, 92vw);
       margin: auto;
       box-shadow: 0 25px 60px rgba(0,0,0,0.8);
-      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       backdrop-filter: blur(20px);
     }
     dialog::backdrop { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .modal-header h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
-    .modal-close { background: none; border: none; color: var(--text); font-size: 2rem; cursor: pointer; transition: var(--transition); }
-    .modal-close:hover { color: var(--text-white); transform: scale(1.1); }
+    .modal-header h2 { font-size: 1.4rem; font-weight: 800; }
+    .modal-close { background: none; border: none; color: var(--text); font-size: 2rem; cursor: pointer; }
 
     .search-results-container {
       max-height: 350px;
@@ -414,25 +412,18 @@
       border-radius: 10px;
       cursor: pointer;
       border: 1px solid var(--border);
-      transition: var(--transition);
     }
-    .search-result-item:hover { border-color: var(--green); background: var(--surface); transform: translateX(4px); }
+    .search-result-item:hover { border-color: var(--green); background: var(--surface); }
     .search-result-item img { width: 50px; height: 75px; object-fit: cover; border-radius: 6px; }
 
     .form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.2rem; }
-    .form-group label { font-size: 0.85rem; color: var(--text); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .form-group label { font-size: 0.85rem; color: var(--text); font-weight: 700; text-transform: uppercase; }
     .form-group input, .form-group select, .form-group textarea {
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.8rem 1rem;
       color: var(--text-white);
-      transition: var(--transition);
-    }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-      outline: none;
-      border-color: var(--green);
-      box-shadow: 0 0 15px var(--green-glow);
     }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
     .submit-btn {
@@ -447,11 +438,6 @@
       cursor: pointer;
       margin-top: 1.2rem;
       box-shadow: 0 4px 20px var(--green-glow);
-      transition: var(--transition);
-    }
-    .submit-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(0, 224, 84, 0.6);
     }
 
     footer { background: #06080a; border-top: 1px solid var(--border); text-align: center; padding: 3rem 1rem; margin-top: 5rem; font-size: 0.85rem; color: var(--text); }
@@ -459,13 +445,14 @@
     @media (max-width: 850px) {
       .hero-stats { grid-template-columns: 1fr; padding: 2rem; }
       .main-nav { display: none; }
-      .header-content { padding: 1rem; }
+      .header-content { padding: 1rem; flex-direction: column; align-items: stretch; }
+      .global-search-bar { max-width: 100%; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Header Spettacolare -->
+  <!-- Header con Barra di Ricerca Universale (Film & Utenti) -->
   <header class="site-header">
     <div class="header-content">
       <a class="logo" href="#home" onclick="switchTab('home')">
@@ -476,13 +463,21 @@
         </span>
         Cine<span>Boxd</span>
       </a>
+
+      <!-- Barra di ricerca unificata -->
+      <div class="global-search-bar">
+        <span class="global-search-icon">🔍</span>
+        <input type="text" id="globalSearchInput" placeholder="Cerca film o utenti (es. Avatar, @mario)..." oninput="handleGlobalSearch(this.value)">
+        <div class="search-results-container" id="globalSearchResults" style="display:none; position:absolute; top:110%; left:0; width:100%; background:var(--surface-light); border:1px solid var(--border); border-radius:12px; z-index:2000; max-height:350px; overflow-y:auto; padding:0.5rem; box-shadow:0 15px 30px rgba(0,0,0,0.8);"></div>
+      </div>
+
       <nav class="main-nav">
         <button class="nav-link active" onclick="switchTab('home')" id="nav-home">Home</button>
-        <button class="nav-link" onclick="switchTab('community')" id="nav-community">Feed Community</button>
-        <button class="nav-link" onclick="switchTab('profile')" id="nav-profile">Il Mio Profilo</button>
+        <button class="nav-link" onclick="switchTab('community')" id="nav-community">Feed</button>
+        <button class="nav-link" onclick="switchTab('profile')" id="nav-profile">Profilo</button>
       </nav>
       <div class="header-actions">
-        <button class="btn-log" onclick="openSearchModal()">+ LOG FILM</button>
+        <button class="btn-log" onclick="openSearchModal()">+ LOG</button>
         <div id="authContainer">
           <button class="btn-auth-nav" onclick="openAuthModal()">Accedi</button>
         </div>
@@ -494,7 +489,7 @@
   <main class="container fade-in" id="main-container"></main>
 
   <footer>
-    <p>CineBoxd Pro — Social network per cinefili basato su TMDB e Firebase Cloud. Design Cinematico Avanzato.</p>
+    <p>CineBoxd Pro — Social network completo con ricerca universale di film e utenti.</p>
   </footer>
 
   <!-- Modal Autenticazione -->
@@ -520,21 +515,21 @@
     </form>
   </dialog>
 
-  <!-- Modal Ricerca TMDB -->
+  <!-- Modal Ricerca Dedicata (+ LOG) -->
   <dialog id="searchModal">
     <div class="modal-header">
-      <h2>Cerca un film</h2>
+      <h2>Cerca un film da registrare</h2>
       <button class="modal-close" onclick="document.getElementById('searchModal').close()">&times;</button>
     </div>
     <div class="form-group">
-      <input type="text" id="tmdbSearchInput" placeholder="Titolo film (es. Interstellar, Avatar)..." oninput="searchTMDB(this.value)">
+      <input type="text" id="tmdbSearchInput" placeholder="Titolo film..." oninput="searchTMDB(this.value)">
     </div>
     <div class="search-results-container" id="searchResults">
       <p style="color: var(--text); text-align:center; padding: 1.5rem;">Inizia a digitare il titolo...</p>
     </div>
   </dialog>
 
-  <!-- Modal Dettagli Film, Trama, Regista & Attori -->
+  <!-- Modal Dettagli Film -->
   <dialog id="detailModal">
     <div class="modal-header">
       <h2 id="detMovieTitle" style="font-size: 1.4rem; font-weight: 900;">Titolo Film</h2>
@@ -543,7 +538,7 @@
     <div id="detMovieModalContent" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.2rem;">
       <img id="detMoviePoster" src="" alt="" style="width: 130px; height: 190px; object-fit: cover; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); flex-shrink: 0;">
       <div style="flex-grow: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.5rem;">
-        <div id="detMovieGenres" style="font-size: 0.75rem; color: var(--green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;"></div>
+        <div id="detMovieGenres" style="font-size: 0.75rem; color: var(--green); font-weight: 800; text-transform: uppercase;"></div>
         <div id="detMovieMeta" style="font-size: 0.85rem; color: var(--text); font-weight: 600;"></div>
         <div id="detMovieDirector" style="font-size: 0.85rem; color: var(--text-white); font-weight: 600;"></div>
         <div id="detMovieCast" style="font-size: 0.8rem; color: var(--text);"></div>
@@ -611,6 +606,7 @@
     let globalReviews = [];
     let currentTab = 'home';
     let profileSubTab = 'diary';
+    let viewingUserEmail = null;
     let isRegistering = false;
     let selectedMovieCache = null;
 
@@ -678,11 +674,14 @@
       } catch (e) { console.error("Errore caricamento database cloud:", e); }
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, userEmail = null) {
       currentTab = tab;
+      viewingUserEmail = userEmail;
       document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
-      const activeNav = document.getElementById(`nav-${tab}`);
-      if(activeNav) activeNav.classList.add('active');
+      if(tab !== 'externalProfile') {
+        const activeNav = document.getElementById(`nav-${tab}`);
+        if(activeNav) activeNav.classList.add('active');
+      }
       renderApp();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -692,7 +691,7 @@
       renderApp();
     }
 
-    function renderApp() {
+    async function renderApp() {
       const container = document.getElementById('main-container');
       
       if (currentTab === 'home') {
@@ -703,8 +702,8 @@
             <div class="hero-text">
               <p style="color:var(--green); text-transform:uppercase; font-size:0.75rem; font-weight:800; letter-spacing:0.15em; margin-bottom:0.6rem;">Social Cinema Network</p>
               <h1>Condividi le tue recensioni con la <span>community globale.</span></h1>
-              <p>Esplora i film del momento, scopri registi, attori, trame dettagliate e gestisci il tuo profilo privato.</p>
-              <button class="btn-log" onclick="openSearchModal()">+ Cerca un Film</button>
+              <p>Usa la barra di ricerca in alto per trovare film o altri cinefili in tempo reale.</p>
+              <button class="btn-log" onclick="openSearchModal()">+ Registra Film</button>
             </div>
             <div class="stats-card">
               <div class="stat-item">
@@ -738,12 +737,12 @@
             <div class="horizontal-scroll-container" id="scifi-catalog">Caricamento...</div>
           </div>
 
-          ${renderReviewSection("Ultimi Film Recensiti dalla Community", globalReviews.filter(m => m.type !== 'watchlist').slice(0, 8))}
+          ${renderCommunityFeed("Ultimi Film Recensiti dalla Community", globalReviews.filter(m => m.type !== 'watchlist').slice(0, 8))}
         `;
         loadHomeCatalogs();
 
       } else if (currentTab === 'community') {
-        container.innerHTML = renderReviewSection("Feed Globale della Community", globalReviews.filter(m => m.type !== 'watchlist'));
+        container.innerHTML = renderCommunityFeed("Feed Globale della Community", globalReviews.filter(m => m.type !== 'watchlist'));
       } else if (currentTab === 'profile') {
         if (!currentUser) {
           container.innerHTML = `<div style="text-align:center; padding:5rem 0;"><h3>Effettua l'accesso per visualizzare il tuo profilo privato.</h3></div>`;
@@ -759,13 +758,15 @@
 
         if (profileSubTab === 'diary') {
           const userDiary = globalReviews.filter(m => m.userEmail === currentUser.email && m.type !== 'watchlist');
-          profileHtml += renderDiarySection("Il mio Diario Personale dei Film", userDiary);
+          profileHtml += renderDiarySection("Il mio Diario Personale dei Film", userDiary, false);
         } else {
           const userWatchlist = globalReviews.filter(m => m.userEmail === currentUser.email && m.type === 'watchlist');
           profileHtml += renderWatchlistSection("La mia Watchlist (Film da Vedere)", userWatchlist);
         }
 
         container.innerHTML = profileHtml;
+      } else if (currentTab === 'externalProfile') {
+        container.innerHTML = await renderExternalProfile(viewingUserEmail);
       }
     }
 
@@ -804,7 +805,87 @@
       } catch(e) { console.error(e); }
     }
 
-    // Carica dettagli, trama, regista e attori tramite apposita chiamata con append_to_response a credits
+    async function handleGlobalSearch(queryText) {
+      const resultsBox = document.getElementById('globalSearchResults');
+      if (!queryText.trim()) {
+        resultsBox.style.display = 'none';
+        resultsBox.innerHTML = '';
+        return;
+      }
+
+      resultsBox.style.display = 'block';
+      resultsBox.innerHTML = '<p style="text-align:center; color:var(--text); padding:0.8rem; font-size:0.8rem;">Ricerca in corso...</p>';
+
+      try {
+        const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(queryText)}`);
+        const data = await res.json();
+        const movieResults = data.results ? data.results.slice(0, 4) : [];
+
+        const uniqueUsers = [...new Set(globalReviews.map(r => r.userEmail))].filter(email => email && email.toLowerCase().includes(queryText.toLowerCase()));
+
+        resultsBox.innerHTML = '';
+
+        if (movieResults.length === 0 && uniqueUsers.length === 0) {
+          resultsBox.innerHTML = '<p style="text-align:center; color:var(--text); padding:0.8rem; font-size:0.8rem;">Nessun risultato trovato.</p>';
+          return;
+        }
+
+        if (uniqueUsers.length > 0) {
+          resultsBox.innerHTML += `<div style="font-size:0.7rem; text-transform:uppercase; color:var(--green); font-weight:800; padding:0.4rem 0.6rem; letter-spacing:0.1em;">Utenti Trovati</div>`;
+          uniqueUsers.forEach(email => {
+            const username = email.split('@')[0];
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+              <div style="width:35px; height:35px; border-radius:50%; background:var(--green); color:#05140a; display:flex; align-items:center; justify-content:center; font-weight:900;">${username[0].toUpperCase()}</div>
+              <div>
+                <strong style="color:var(--text-white); font-size:0.9rem;">@${username}</strong>
+                <p style="font-size:0.75rem; color:var(--text);">Utente CineBoxd</p>
+              </div>
+            `;
+            item.onclick = () => {
+              resultsBox.style.display = 'none';
+              document.getElementById('globalSearchInput').value = '';
+              switchTab('externalProfile', email);
+            };
+            resultsBox.appendChild(item);
+          });
+        }
+
+        if (movieResults.length > 0) {
+          resultsBox.innerHTML += `<div style="font-size:0.7rem; text-transform:uppercase; color:var(--blue); font-weight:800; padding:0.6rem 0.6rem 0.4rem 0.6rem; letter-spacing:0.1em; border-top:1px solid var(--border); margin-top:0.4rem;">Film (TMDB)</div>`;
+          movieResults.forEach(movie => {
+            const year = movie.release_date ? movie.release_date.split('-')[0] : '';
+            const poster = movie.poster_path ? IMAGE_BASE_URL + movie.poster_path : '';
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+              <img src="${poster || 'https://via.placeholder.com/40x60'}" alt="" style="width:35px; height:50px; object-fit:cover; border-radius:4px;">
+              <div>
+                <strong style="color:var(--text-white); font-size:0.9rem;">${movie.title}</strong>
+                <p style="font-size:0.75rem; color:var(--text);">${year}</p>
+              </div>
+            `;
+            item.onclick = () => {
+              resultsBox.style.display = 'none';
+              document.getElementById('globalSearchInput').value = '';
+              openMovieDetails(movie.id);
+            };
+            resultsBox.appendChild(item);
+          });
+        }
+
+      } catch (err) { console.error(err); }
+    }
+
+    window.addEventListener('click', (e) => {
+      const searchBar = document.querySelector('.global-search-bar');
+      const resultsBox = document.getElementById('globalSearchResults');
+      if (searchBar && resultsBox && !searchBar.contains(e.target)) {
+        resultsBox.style.display = 'none';
+      }
+    });
+
     async function openMovieDetails(movieId) {
       try {
         const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`);
@@ -815,17 +896,15 @@
           title: movie.title,
           year: movie.release_date ? movie.release_date.split('-')[0] : '',
           poster: movie.poster_path,
-          overview: movie.overview || "Nessuna trama disponibile in italiano per questo film."
+          overview: movie.overview || "Nessuna trama disponibile."
         };
 
-        // Estrai Regista
         let director = "Non disponibile";
         if (movie.credits && movie.credits.crew) {
           const dirObj = movie.credits.crew.find(person => person.job === "Director");
           if (dirObj) director = dirObj.name;
         }
 
-        // Estrai Primi 4 Attori
         let castList = "Non disponibile";
         if (movie.credits && movie.credits.cast) {
           castList = movie.credits.cast.slice(0, 4).map(actor => actor.name).join(', ');
@@ -840,9 +919,7 @@
         document.getElementById('detMovieOverview').textContent = selectedMovieCache.overview;
 
         document.getElementById('detailModal').showModal();
-      } catch (err) {
-        console.error("Errore caricamento dettagli TMDB:", err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     function openLogFromDetail() {
@@ -862,7 +939,173 @@
       document.getElementById('logModal').showModal();
     }
 
-    function renderDiarySection(title, list) {
+    async function renderExternalProfile(targetEmail) {
+      const username = targetEmail.split('@')[0];
+      const userDiary = globalReviews.filter(m => m.userEmail === targetEmail && m.type !== 'watchlist');
+      const userWatchlist = globalReviews.filter(m => m.userEmail === targetEmail && m.type === 'watchlist');
+
+      let isFollowing = false;
+      if (currentUser && currentUser.email !== targetEmail) {
+        try {
+          const userRef = window.fbMethods.doc(window.firebaseDb, "users", currentUser.email);
+          const userSnap = await window.fbMethods.getDoc(userRef);
+          if (userSnap.exists()) {
+            const following = userSnap.data().following || [];
+            isFollowing = following.includes(targetEmail);
+          }
+        } catch (e) { console.error(e); }
+      }
+
+      let html = `
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+          <div>
+            <p style="color:var(--green); font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem;">Profilo Cinefilo</p>
+            <h1 style="color:var(--text-white); font-size: 2.2rem; font-weight:900;">@${username}</h1>
+            <p style="color:var(--text); font-size: 0.9rem; margin-top:0.4rem;">${userDiary.length} film visti • ${userWatchlist.length} film in watchlist</p>
+          </div>
+          ${currentUser && currentUser.email !== targetEmail ? `
+            <button class="submit-btn" style="width: auto; padding: 0.7rem 1.8rem; background: ${isFollowing ? 'var(--surface-light)' : 'var(--green)'}; color: ${isFollowing ? 'var(--text-white)' : '#05140a'}; border: 1px solid var(--border);" onclick="toggleFollow('${targetEmail}')">
+              ${isFollowing ? '✓ Amici / Seguito' : '+ Richiedi Amicizia / Segui'}
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      html += renderDiarySection(`Diario di @${username}`, userDiary, true);
+      return html;
+    }
+
+    async function toggleFollow(targetEmail) {
+      if (!currentUser) return;
+      const userRef = window.fbMethods.doc(window.firebaseDb, "users", currentUser.email);
+      try {
+        const userSnap = await window.fbMethods.getDoc(userRef);
+        let following = [];
+        if (userSnap.exists()) {
+          following = userSnap.data().following || [];
+        }
+
+        if (following.includes(targetEmail)) {
+          await window.fbMethods.setDoc(userRef, { following: window.fbMethods.arrayRemove(targetEmail) }, { merge: true });
+          alert(`Hai smesso di seguire @${targetEmail.split('@')[0]}`);
+        } else {
+          await window.fbMethods.setDoc(userRef, { following: window.fbMethods.arrayUnion(targetEmail) }, { merge: true });
+          alert(`Richiesta di amicizia accettata! Ora segui @${targetEmail.split('@')[0]}`);
+        }
+        renderApp();
+      } catch (err) { console.error(err); }
+    }
+
+    function renderCommunityFeed(title, list) {
+      let html = `
+        <div class="section-header">
+          <h2>${title}</h2>
+          <span style="font-size: 0.9rem; color: var(--text); font-weight:600;">${list.length} recensioni</span>
+        </div>
+      `;
+
+      if (list.length === 0) {
+        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>Nessuna recensione trovata nella community.</p></div>`;
+      } else {
+        html += `<div class="feed-list">`;
+        list.forEach(m => {
+          const likes = m.likes || [];
+          const hasLiked = currentUser && likes.includes(currentUser.email);
+          const comments = m.comments || [];
+          const authorEmail = m.userEmail || '';
+          const authorName = authorEmail ? authorEmail.split('@')[0] : 'Anonimo';
+
+          html += `
+            <div class="feed-card">
+              <img class="feed-poster" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/90x130'}" alt="${m.title}">
+              <div class="feed-content">
+                <div class="feed-author-bar">
+                  <span onclick="switchTab('externalProfile', '${authorEmail}')">@${authorName} (Visualizza Profilo)</span>
+                  <span>📅 ${m.date || ''}</span>
+                </div>
+                <div class="feed-movie-title">${m.title} (${m.year})</div>
+                <div style="color:var(--green); font-size:0.9rem;">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>
+                <p class="feed-review-text">${m.review || 'Nessuna nota.'}</p>
+                
+                <div class="social-actions">
+                  <button class="action-btn ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${m.id}')">
+                    ❤️ <span>${likes.length}</span> Mi piace
+                  </button>
+                  <button class="action-btn" onclick="toggleCommentsBox('${m.id}')">
+                    💬 <span>${comments.length}</span> Commenti
+                  </button>
+                </div>
+
+                <div class="comments-section" id="comments-${m.id}">
+                  <div style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 150px; overflow-y: auto;">
+                    ${comments.length === 0 ? '<p style="font-size:0.8rem; color:var(--text);">Nessun commento. Sii il primo a commentare!</p>' : 
+                      comments.map(c => `<div class="comment-item"><strong>@${c.user.split('@')[0]}</strong>: ${c.text}</div>`).join('')}
+                  </div>
+                  <div class="comment-form">
+                    <input type="text" class="comment-input" id="comment-input-${m.id}" placeholder="Scrivi un commento...">
+                    <button class="comment-submit" onclick="addComment('${m.id}')">Invia</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      return html;
+    }
+
+    async function toggleLike(reviewId) {
+      if (!currentUser) {
+        alert("Devi effettuare l'accesso per mettere Mi piace!");
+        openAuthModal();
+        return;
+      }
+      const ref = window.fbMethods.doc(window.firebaseDb, "reviews", reviewId);
+      const snap = await window.fbMethods.getDoc(ref);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      const likes = data.likes || [];
+      const hasLiked = likes.includes(currentUser.email);
+
+      try {
+        if (hasLiked) {
+          await window.fbMethods.updateDoc(ref, { likes: window.fbMethods.arrayRemove(currentUser.email) });
+        } else {
+          await window.fbMethods.updateDoc(ref, { likes: window.fbMethods.arrayUnion(currentUser.email) });
+        }
+        loadCloudReviews();
+      } catch (err) { console.error(err); }
+    }
+
+    function toggleCommentsBox(reviewId) {
+      const box = document.getElementById(`comments-${reviewId}`);
+      if (box) box.classList.toggle('open');
+    }
+
+    async function addComment(reviewId) {
+      if (!currentUser) {
+        alert("Devi effettuare l'accesso per commentare!");
+        openAuthModal();
+        return;
+      }
+      const input = document.getElementById(`comment-input-${reviewId}`);
+      const text = input.value.trim();
+      if (!text) return;
+
+      const ref = window.fbMethods.doc(window.firebaseDb, "reviews", reviewId);
+      const newComment = { user: currentUser.email, text: text, createdAt: Date.now() };
+
+      try {
+        await window.fbMethods.updateDoc(ref, { comments: window.fbMethods.arrayUnion(newComment) });
+        input.value = '';
+        loadCloudReviews();
+      } catch (err) { console.error(err); }
+    }
+
+    function renderDiarySection(title, list, isExternal = false) {
       let html = `
         <div class="section-header">
           <h2>${title}</h2>
@@ -871,7 +1114,7 @@
       `;
 
       if (list.length === 0) {
-        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>Il tuo diario è vuoto. Inizia a registrare i film visti!</p></div>`;
+        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>Nessun film registrato nel diario.</p></div>`;
       } else {
         html += `<div class="diary-list">`;
         list.forEach(m => {
@@ -881,10 +1124,10 @@
               <div class="diary-content">
                 <span class="diary-date-badge">📅 Visto il: ${m.date || 'Data non specificata'}</span>
                 <div class="diary-title">${m.title} (${m.year})</div>
-                <div class="movie-rating">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>
-                <p class="diary-review">${m.review || 'Nessuna nota personale.'}</p>
+                <div style="color:var(--green); font-size:0.9rem;">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>
+                <p style="font-size: 0.95rem; color: var(--text);">${m.review || 'Nessuna nota personale.'}</p>
               </div>
-              <button class="btn-delete" onclick="deleteMovie('${m.id}')">Elimina</button>
+              ${!isExternal ? `<button class="btn-delete" onclick="deleteMovie('${m.id}')">Elimina</button>` : ''}
             </div>
           `;
         });
@@ -902,18 +1145,24 @@
       `;
 
       if (list.length === 0) {
-        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>La tua Watchlist è vuota. Aggiungi film da vedere in futuro!</p></div>`;
+        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>La tua Watchlist è vuota.</p></div>`;
       } else {
         html += `<div class="grid">`;
         list.forEach(m => {
+          // Uso di data attributes per evitare problemi di sintassi con titoli aventi apici o virgolette
           html += `
             <div class="movie-card">
               <img class="poster-img" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/230x320'}" alt="${m.title}">
               <div class="movie-info">
                 <div class="movie-title">${m.title} (${m.year})</div>
-                <p class="movie-review-snippet" style="color:var(--blue); font-weight:700;">In Watchlist</p>
+                <p style="color:var(--blue); font-weight:700; font-size:0.85rem;">In Watchlist</p>
                 <div class="movie-author">
-                  <button class="btn-log" style="padding:0.4rem 0.9rem; font-size:0.75rem;" onclick="moveToDiary('${m.id}', '${m.title.replace(/'/g, "\\'")}', '${m.year}', '${m.poster}')">✓ Visto</button>
+                  <button class="btn-log" style="padding:0.4rem 0.9rem; font-size:0.75rem;" 
+                          data-id="${m.id}" 
+                          data-title="${encodeURIComponent(m.title)}" 
+                          data-year="${m.year}" 
+                          data-poster="${m.poster || ''}" 
+                          onclick="moveToDiaryFromButton(this)">✓ Visto</button>
                   <button class="btn-delete" onclick="deleteMovie('${m.id}')">Rimuovi</button>
                 </div>
               </div>
@@ -925,39 +1174,9 @@
       return html;
     }
 
-    function renderReviewSection(title, list) {
-      let html = `
-        <div class="section-header">
-          <h2>${title}</h2>
-          <span style="font-size: 0.9rem; color: var(--text); font-weight:600;">${list.length} recensioni</span>
-        </div>
-      `;
-
-      if (list.length === 0) {
-        html += `<div style="text-align: center; padding: 4rem 0; color: var(--text);"><p>Nessuna recensione trovata.</p></div>`;
-      } else {
-        html += `<div class="grid">`;
-        list.forEach(m => {
-          html += `
-            <div class="movie-card">
-              <img class="poster-img" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/230x320'}" alt="${m.title}">
-              <div class="movie-info">
-                <div class="movie-title">${m.title} (${m.year})</div>
-                <div class="movie-rating">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>
-                <p class="movie-review-snippet">${m.review || 'Nessuna nota.'}</p>
-                <div class="movie-author">Utente: ${m.userEmail ? m.userEmail.split('@')[0] : 'Anonimo'}</div>
-              </div>
-            </div>
-          `;
-        });
-        html += `</div>`;
-      }
-      return html;
-    }
-
     function openSearchModal() {
       document.getElementById('tmdbSearchInput').value = '';
-      document.getElementById('searchResults').innerHTML = '<p style="color: var(--text); text-align:center; padding: 1.5rem;">Digita il titolo...</p>';
+      document.getElementById('searchResults').innerHTML = '<p style="color: var(--text); text-align:center; padding: 1.5rem;">Inizia a digitare il titolo...</p>';
       document.getElementById('searchModal').showModal();
     }
 
@@ -1014,7 +1233,9 @@
         poster: document.getElementById('modalMoviePoster').value,
         type: destination,
         userEmail: currentUser.email,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        likes: [],
+        comments: []
       };
 
       if (destination === 'diary') {
@@ -1041,7 +1262,12 @@
       }
     }
 
-    async function moveToDiary(id, title, year, poster) {
+    async function moveToDiaryFromButton(buttonEl) {
+      const id = buttonEl.getAttribute('data-id');
+      const title = decodeURIComponent(buttonEl.getAttribute('data-title'));
+      const year = buttonEl.getAttribute('data-year');
+      const poster = buttonEl.getAttribute('data-poster');
+
       try {
         await window.fbMethods.deleteDoc(window.fbMethods.doc(window.firebaseDb, "reviews", id));
         document.getElementById('modalMovieTitle').value = title;
