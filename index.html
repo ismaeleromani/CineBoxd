@@ -131,7 +131,6 @@
     .dot.orange { background: var(--orange); }
     .dot.blue { background: var(--blue); }
 
-    /* Barra di Ricerca Globale Header */
     .global-search-bar {
       flex-grow: 1;
       max-width: 400px;
@@ -280,12 +279,35 @@
     .tmdb-card-meta { font-size: 0.75rem; color: var(--text); display: flex; justify-content: space-between; margin-top: 0.3rem; font-weight: 600; }
 
     /* Profilo */
+    .profile-header-card {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-light) 100%);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--green);
+      box-shadow: 0 0 20px var(--green-glow);
+    }
+    .profile-info { flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .profile-bio { font-size: 0.95rem; color: var(--text-white); font-style: italic; max-width: 600px; }
+
     .profile-tabs {
       display: flex;
       gap: 1.2rem;
       margin-bottom: 2.5rem;
       border-bottom: 1px solid var(--border);
       padding-bottom: 1.2rem;
+      flex-wrap: wrap;
     }
     .profile-tab-btn {
       background: var(--surface);
@@ -343,7 +365,6 @@
     .comment-input { flex-grow: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; color: var(--text-white); font-size: 0.85rem; }
     .comment-submit { background: var(--green); color: #05140a; border: none; padding: 0.4rem 0.9rem; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.8rem; }
 
-    /* Diario e Watchlist */
     .diary-list { display: flex; flex-direction: column; gap: 1.2rem; }
     .diary-item {
       background: var(--surface);
@@ -452,7 +473,7 @@
 </head>
 <body>
 
-  <!-- Header con Barra di Ricerca Universale (Film & Utenti) -->
+  <!-- Header -->
   <header class="site-header">
     <div class="header-content">
       <a class="logo" href="#home" onclick="switchTab('home')">
@@ -464,7 +485,6 @@
         Cine<span>Boxd</span>
       </a>
 
-      <!-- Barra di ricerca unificata -->
       <div class="global-search-bar">
         <span class="global-search-icon">🔍</span>
         <input type="text" id="globalSearchInput" placeholder="Cerca film o utenti (es. Avatar, @mario)..." oninput="handleGlobalSearch(this.value)">
@@ -485,11 +505,10 @@
     </div>
   </header>
 
-  <!-- Container Principale -->
   <main class="container fade-in" id="main-container"></main>
 
   <footer>
-    <p>CineBoxd Pro — Social network completo con ricerca universale di film e utenti.</p>
+    <p>CineBoxd Pro — Social network completo con caricamento foto profilo da PC e amicizie.</p>
   </footer>
 
   <!-- Modal Autenticazione -->
@@ -512,6 +531,29 @@
         <span id="authToggleText">Non hai un account?</span> 
         <a href="#" onclick="toggleAuthMode()" style="color: var(--green); text-decoration: none; font-weight: bold;">Registrati</a>
       </p>
+    </form>
+  </dialog>
+
+  <!-- Modal Modifica Profilo con File Upload PC -->
+  <dialog id="editProfileModal">
+    <div class="modal-header">
+      <h2>Modifica il tuo Profilo</h2>
+      <button class="modal-close" onclick="document.getElementById('editProfileModal').close()">&times;</button>
+    </div>
+    <form id="editProfileForm" onsubmit="saveUserProfile(event)">
+      <div class="form-group">
+        <label>Immagine Profilo (Seleziona file dal PC)</label>
+        <input type="file" id="inputAvatarFile" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label>Biografia / Descrizione</label>
+        <textarea id="inputBio" rows="3" placeholder="Raccontaci qualcosa di te e dei tuoi gusti cinematografici..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Film Preferiti (Inserisci i titoli separati da virgola, max 4)</label>
+        <input type="text" id="inputFavMovies" placeholder="Interstellar, Pulp Fiction, Inception, Matrix">
+      </div>
+      <button type="submit" class="submit-btn">Salva Modifiche</button>
     </form>
   </dialog>
 
@@ -604,6 +646,7 @@
 
     let currentUser = null;
     let globalReviews = [];
+    let userProfilesData = {};
     let currentTab = 'home';
     let profileSubTab = 'diary';
     let viewingUserEmail = null;
@@ -615,6 +658,7 @@
         currentUser = user;
         updateAuthUI();
         loadCloudReviews();
+        loadAllProfiles();
       });
     }, 1000);
 
@@ -674,6 +718,17 @@
       } catch (e) { console.error("Errore caricamento database cloud:", e); }
     }
 
+    async function loadAllProfiles() {
+      try {
+        const snap = await window.fbMethods.getDocs(window.fbMethods.collection(window.firebaseDb, "users"));
+        userProfilesData = {};
+        snap.forEach(d => {
+          userProfilesData[d.id] = d.data();
+        });
+        renderApp();
+      } catch(e) { console.error(e); }
+    }
+
     function switchTab(tab, userEmail = null) {
       currentTab = tab;
       viewingUserEmail = userEmail;
@@ -702,7 +757,7 @@
             <div class="hero-text">
               <p style="color:var(--green); text-transform:uppercase; font-size:0.75rem; font-weight:800; letter-spacing:0.15em; margin-bottom:0.6rem;">Social Cinema Network</p>
               <h1>Condividi le tue recensioni con la <span>community globale.</span></h1>
-              <p>Usa la barra di ricerca in alto per trovare film o altri cinefili in tempo reale.</p>
+              <p>Personalizza il tuo profilo, carica la tua foto dai file del PC e segui gli amici.</p>
               <button class="btn-log" onclick="openSearchModal()">+ Registra Film</button>
             </div>
             <div class="stats-card">
@@ -749,19 +804,37 @@
           return;
         }
         
+        const myProfile = userProfilesData[currentUser.email] || {};
+        const avatar = myProfile.avatar || 'https://via.placeholder.com/100';
+        const bio = myProfile.bio || 'Nessuna biografia inserita.';
+        const favs = myProfile.favMovies || [];
+
         let profileHtml = `
+          <div class="profile-header-card">
+            <img class="profile-avatar" src="${avatar}" alt="Avatar">
+            <div class="profile-info">
+              <h1 style="color:var(--text-white); font-size: 2rem; font-weight:900;">@${currentUser.email.split('@')[0]}</h1>
+              <p class="profile-bio">"${bio}"</p>
+              ${favs.length > 0 ? `<div style="font-size:0.8rem; color:var(--text); margin-top:0.4rem;">Film Preferiti: <strong>${favs.join(', ')}</strong></div>` : ''}
+            </div>
+            <button class="submit-btn" style="width: auto; padding: 0.6rem 1.4rem; margin: 0;" onclick="openEditProfileModal()">Modifica Profilo</button>
+          </div>
+
           <div class="profile-tabs">
             <button class="profile-tab-btn ${profileSubTab === 'diary' ? 'active' : ''}" onclick="switchProfileSubTab('diary')">📖 Diario Personale</button>
             <button class="profile-tab-btn ${profileSubTab === 'watchlist' ? 'active' : ''}" onclick="switchProfileSubTab('watchlist')">📌 Watchlist</button>
+            <button class="profile-tab-btn ${profileSubTab === 'friends' ? 'active' : ''}" onclick="switchProfileSubTab('friends')">👥 Amici e Richieste</button>
           </div>
         `;
 
         if (profileSubTab === 'diary') {
           const userDiary = globalReviews.filter(m => m.userEmail === currentUser.email && m.type !== 'watchlist');
           profileHtml += renderDiarySection("Il mio Diario Personale dei Film", userDiary, false);
-        } else {
+        } else if (profileSubTab === 'watchlist') {
           const userWatchlist = globalReviews.filter(m => m.userEmail === currentUser.email && m.type === 'watchlist');
           profileHtml += renderWatchlistSection("La mia Watchlist (Film da Vedere)", userWatchlist);
+        } else if (profileSubTab === 'friends') {
+          profileHtml += renderFriendsSection(myProfile);
         }
 
         container.innerHTML = profileHtml;
@@ -803,6 +876,53 @@
           container.appendChild(card);
         });
       } catch(e) { console.error(e); }
+    }
+
+    function openEditProfileModal() {
+      const myProfile = userProfilesData[currentUser.email] || {};
+      document.getElementById('inputAvatarFile').value = '';
+      document.getElementById('inputBio').value = myProfile.bio || '';
+      document.getElementById('inputFavMovies').value = (myProfile.favMovies || []).join(', ');
+      document.getElementById('editProfileModal').showModal();
+    }
+
+    async function saveUserProfile(e) {
+      e.preventDefault();
+      if(!currentUser) return;
+
+      const bio = document.getElementById('inputBio').value.trim();
+      const favMoviesStr = document.getElementById('inputFavMovies').value.trim();
+      const favMovies = favMoviesStr ? favMoviesStr.split(',').map(s => s.trim()).slice(0, 4) : [];
+      
+      const fileInput = document.getElementById('inputAvatarFile');
+      const myProfile = userProfilesData[currentUser.email] || {};
+      let avatar = myProfile.avatar || 'https://via.placeholder.com/100';
+
+      const processAndSave = async (avatarData) => {
+        const userRef = window.fbMethods.doc(window.firebaseDb, "users", currentUser.email);
+        try {
+          await window.fbMethods.setDoc(userRef, { 
+            avatar: avatarData, 
+            bio, 
+            favMovies 
+          }, { merge: true });
+          
+          document.getElementById('editProfileModal').close();
+          alert("Profilo aggiornato con successo!");
+          loadAllProfiles();
+        } catch(err) { alert("Errore salvataggio profilo: " + err.message); }
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(uploadEvent) {
+          avatar = uploadEvent.target.result;
+          await processAndSave(avatar);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        await processAndSave(avatar);
+      }
     }
 
     async function handleGlobalSearch(queryText) {
@@ -943,28 +1063,27 @@
       const username = targetEmail.split('@')[0];
       const userDiary = globalReviews.filter(m => m.userEmail === targetEmail && m.type !== 'watchlist');
       const userWatchlist = globalReviews.filter(m => m.userEmail === targetEmail && m.type === 'watchlist');
+      const profile = userProfilesData[targetEmail] || {};
+      const avatar = profile.avatar || 'https://via.placeholder.com/100';
+      const bio = profile.bio || 'Nessuna biografia.';
 
       let isFollowing = false;
       if (currentUser && currentUser.email !== targetEmail) {
-        try {
-          const userRef = window.fbMethods.doc(window.firebaseDb, "users", currentUser.email);
-          const userSnap = await window.fbMethods.getDoc(userRef);
-          if (userSnap.exists()) {
-            const following = userSnap.data().following || [];
-            isFollowing = following.includes(targetEmail);
-          }
-        } catch (e) { console.error(e); }
+        const myProfile = userProfilesData[currentUser.email] || {};
+        const following = myProfile.following || [];
+        isFollowing = following.includes(targetEmail);
       }
 
       let html = `
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
-          <div>
-            <p style="color:var(--green); font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem;">Profilo Cinefilo</p>
-            <h1 style="color:var(--text-white); font-size: 2.2rem; font-weight:900;">@${username}</h1>
-            <p style="color:var(--text); font-size: 0.9rem; margin-top:0.4rem;">${userDiary.length} film visti • ${userWatchlist.length} film in watchlist</p>
+        <div class="profile-header-card">
+          <img class="profile-avatar" src="${avatar}" alt="Avatar">
+          <div class="profile-info">
+            <h1 style="color:var(--text-white); font-size: 2rem; font-weight:900;">@${username}</h1>
+            <p class="profile-bio">"${bio}"</p>
+            <p style="color:var(--text); font-size: 0.85rem; margin-top:0.3rem;">${userDiary.length} film visti • ${userWatchlist.length} in watchlist</p>
           </div>
           ${currentUser && currentUser.email !== targetEmail ? `
-            <button class="submit-btn" style="width: auto; padding: 0.7rem 1.8rem; background: ${isFollowing ? 'var(--surface-light)' : 'var(--green)'}; color: ${isFollowing ? 'var(--text-white)' : '#05140a'}; border: 1px solid var(--border);" onclick="toggleFollow('${targetEmail}')">
+            <button class="submit-btn" style="width: auto; padding: 0.6rem 1.6rem; margin:0; background: ${isFollowing ? 'var(--surface-light)' : 'var(--green)'}; color: ${isFollowing ? 'var(--text-white)' : '#05140a'}; border: 1px solid var(--border);" onclick="toggleFollow('${targetEmail}')">
               ${isFollowing ? '✓ Amici / Seguito' : '+ Richiedi Amicizia / Segui'}
             </button>
           ` : ''}
@@ -980,20 +1099,84 @@
       const userRef = window.fbMethods.doc(window.firebaseDb, "users", currentUser.email);
       try {
         const userSnap = await window.fbMethods.getDoc(userRef);
-        let following = [];
-        if (userSnap.exists()) {
-          following = userSnap.data().following || [];
-        }
+        let following = userSnap.exists() ? (userSnap.data().following || []) : [];
 
         if (following.includes(targetEmail)) {
           await window.fbMethods.setDoc(userRef, { following: window.fbMethods.arrayRemove(targetEmail) }, { merge: true });
-          alert(`Hai smesso di seguire @${targetEmail.split('@')[0]}`);
+          alert(`Hai rimosso @${targetEmail.split('@')[0]} dai tuoi amici.`);
         } else {
           await window.fbMethods.setDoc(userRef, { following: window.fbMethods.arrayUnion(targetEmail) }, { merge: true });
-          alert(`Richiesta di amicizia accettata! Ora segui @${targetEmail.split('@')[0]}`);
+          alert(`Richiesta di amicizia inviata / Amicizia confermata con @${targetEmail.split('@')[0]}!`);
         }
+        await loadAllProfiles();
         renderApp();
       } catch (err) { console.error(err); }
+    }
+
+    function renderFriendsSection(myProfile) {
+      const following = myProfile.following || [];
+      
+      const incomingRequests = Object.keys(userProfilesData).filter(email => {
+        if (email === currentUser.email) return false;
+        const prof = userProfilesData[email];
+        const theirFollowing = prof.following || [];
+        return theirFollowing.includes(currentUser.email) && !following.includes(email);
+      });
+
+      let html = `
+        <div class="section-header">
+          <h2>I tuoi Amici (${following.length})</h2>
+        </div>
+      `;
+
+      if (following.length === 0) {
+        html += `<p style="color:var(--text); margin-bottom:2rem;">Non segui ancora nessun utente. Cerca cinefili tramite la barra in alto!</p>`;
+      } else {
+        html += `<div class="grid" style="margin-bottom: 2.5rem;">`;
+        following.forEach(email => {
+          const uname = email.split('@')[0];
+          const prof = userProfilesData[email] || {};
+          html += `
+            <div class="movie-card" style="padding: 1.2rem; align-items: center; text-align: center;">
+              <img src="${prof.avatar || 'https://via.placeholder.com/80'}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 0.8rem; border: 2px solid var(--green);">
+              <strong style="color:var(--text-white); font-size: 1rem;">@${uname}</strong>
+              <p style="font-size: 0.75rem; color:var(--text); margin-bottom: 1rem;">Cinefilo</p>
+              <div style="display: flex; gap: 0.5rem; width: 100%;">
+                <button class="submit-btn" style="margin:0; padding:0.4rem; font-size:0.75rem;" onclick="switchTab('externalProfile', '${email}')">Profilo</button>
+                <button class="btn-delete" style="padding:0.4rem 0.8rem;" onclick="toggleFollow('${email}')">Rimuovi</button>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      html += `
+        <div class="section-header">
+          <h2>Richieste di Amicizia in Attesa (${incomingRequests.length})</h2>
+        </div>
+      `;
+
+      if (incomingRequests.length === 0) {
+        html += `<p style="color:var(--text);">Nessuna nuova richiesta di amicizia.</p>`;
+      } else {
+        html += `<div class="diary-list">`;
+        incomingRequests.forEach(email => {
+          const uname = email.split('@')[0];
+          html += `
+            <div class="diary-item">
+              <div class="diary-content">
+                <div class="diary-title">@${uname} vorrebbe diventare tuo amico</div>
+                <p style="font-size: 0.85rem; color:var(--text);">Ha iniziato a seguire il tuo profilo su CineBoxd.</p>
+              </div>
+              <button class="btn-log" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="toggleFollow('${email}')">Accetta Amicizia</button>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      return html;
     }
 
     function renderCommunityFeed(title, list) {
@@ -1149,7 +1332,6 @@
       } else {
         html += `<div class="grid">`;
         list.forEach(m => {
-          // Uso di data attributes per evitare problemi di sintassi con titoli aventi apici o virgolette
           html += `
             <div class="movie-card">
               <img class="poster-img" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/230x320'}" alt="${m.title}">
