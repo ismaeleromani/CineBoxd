@@ -3,25 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="CineBoxd Pro - Il tuo diario cinematografico con cataloghi TMDB">
-  <title>CineBoxd Pro - Il tuo diario cinematografico</title>
+  <meta name="description" content="CineBoxd Pro - Social Network per Cinefili">
+  <title>CineBoxd Pro - Social & Cloud</title>
+  
+  <!-- Firebase SDKs (Modulari compatibili con script tag) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // La tua configurazione Firebase estratta dallo screenshot
+    const firebaseConfig = {
+      apiKey: "AIzaSyAfX78JhLPW5D2rvasQjWObB4mSEFAemcQ",
+      authDomain: "cineboxd-social.firebaseapp.com",
+      projectId: "cineboxd-social",
+      storageBucket: "cineboxd-social.appspot.com",
+      messagingSenderId: "105455749646",
+      appId: "1:105455749646:web:a73453b237d09f9588a5f",
+      measurementId: "G-VW9C77S7PP"
+    };
+
+    // Inizializzazione Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Rendiamo globali le funzioni Firebase per gestirle nei pulsanti HTML
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.fbMethods = {
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      orderBy,
+      deleteDoc,
+      doc
+    };
+  </script>
+
   <style>
     :root {
-      --bg: #14181c;
-      --surface: #1d232a;
-      --surface-light: #2c3440;
-      --surface-card: #222831;
+      --bg: #0e1114;
+      --surface: #14181c;
+      --surface-light: #1d232a;
       --text: #9ab;
       --text-white: #ffffff;
       --green: #00e054;
       --green-hover: #00c848;
+      --green-glow: rgba(0, 224, 84, 0.35);
       --orange: #ff8000;
       --blue: #40bcf4;
-      --border: #303840;
+      --border: rgba(255, 255, 255, 0.08);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
+    
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2c3440; border-radius: 4px; }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -31,9 +77,15 @@
 
     button, input, select, textarea { font: inherit; }
 
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     /* Header */
     .site-header {
-      background: #101418;
+      background: rgba(16, 20, 24, 0.9);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
@@ -42,7 +94,7 @@
     .header-content {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0.8rem 1.5rem;
+      padding: 0.9rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -55,12 +107,11 @@
       font-size: 1.6rem;
       font-weight: 900;
       text-decoration: none;
-      letter-spacing: -0.5px;
     }
     .logo span { color: var(--text); font-weight: 400; }
     .logo-dots { display: flex; gap: 4px; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; }
-    .dot.green { background: var(--green); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .dot.green { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
     .dot.orange { background: var(--orange); }
     .dot.blue { background: var(--blue); }
 
@@ -71,18 +122,15 @@
       font-weight: 600;
       font-size: 0.9rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      transition: color 0.2s;
-      cursor: pointer;
       background: none;
       border: none;
+      cursor: pointer;
+      transition: color 0.2s;
     }
     .nav-link:hover, .nav-link.active { color: var(--text-white); }
 
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
     .btn-log {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
       background: linear-gradient(135deg, #00e054 0%, #00b341 100%);
       color: #05140a;
       border: none;
@@ -91,53 +139,65 @@
       font-weight: 800;
       font-size: 0.85rem;
       cursor: pointer;
-      box-shadow: 0 3px 10px rgba(0, 224, 84, 0.25);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px var(--green-glow);
+      transition: transform 0.2s;
     }
-    .btn-log:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0, 224, 84, 0.4);
+    .btn-log:hover { transform: translateY(-2px); }
+    
+    .user-badge {
+      font-size: 0.8rem;
+      color: var(--green);
+      background: rgba(0, 224, 84, 0.1);
+      padding: 0.3rem 0.8rem;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 224, 84, 0.3);
     }
+    .btn-auth-nav {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-white);
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85srem;
+    }
+    .btn-auth-nav:hover { border-color: var(--text-white); }
 
     .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
 
-    /* Hero / Stats */
+    /* Hero */
     .hero-stats {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 2rem;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 2.5rem;
-      margin-bottom: 2.5rem;
+      margin-bottom: 3rem;
       align-items: center;
     }
-    .hero-text h1 { color: var(--text-white); font-size: 2.5rem; line-height: 1.1; margin-bottom: 1rem; }
+    .hero-text h1 { color: var(--text-white); font-size: 2.3rem; line-height: 1.15; margin-bottom: 1rem; }
     .hero-text h1 span { color: var(--green); }
-    .hero-text p { font-size: 1.1rem; margin-bottom: 1.5rem; }
+    .hero-text p { font-size: 1.05rem; margin-bottom: 1.5rem; }
     
     .stats-card {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 1.5rem;
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 1rem;
       text-align: center;
     }
-    .stat-item .number { color: var(--text-white); font-size: 1.8rem; font-weight: 800; display: block; }
-    .stat-item .label { font-size: 0.8rem; text-transform: uppercase; color: var(--text); }
+    .stat-item .number { color: var(--text-white); font-size: 2rem; font-weight: 800; display: block; }
+    .stat-item .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text); }
 
-    /* Cataloghi Orizzontali Home */
+    /* Cataloghi Home */
     .catalog-section { margin-bottom: 3rem; }
-    .catalog-title { color: var(--text-white); font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .catalog-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 1.2rem;
-    }
+    .catalog-title { color: var(--text-white); font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem; }
+    .catalog-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.2rem; }
 
     .tmdb-card {
       background: var(--surface);
@@ -147,21 +207,13 @@
       cursor: pointer;
       transition: transform 0.2s, border-color 0.2s;
     }
-    .tmdb-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--green);
-    }
-    .tmdb-card img {
-      width: 100%;
-      height: 240px;
-      object-fit: cover;
-      background: #222;
-    }
+    .tmdb-card:hover { transform: translateY(-5px); border-color: var(--green); }
+    .tmdb-card img { width: 100%; height: 230px; object-fit: cover; }
     .tmdb-card-info { padding: 0.6rem; }
     .tmdb-card-title { color: var(--text-white); font-size: 0.85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tmdb-card-meta { font-size: 0.75rem; color: var(--text); display: flex; justify-content: space-between; margin-top: 0.2rem; }
 
-    /* Header Sezione */
+    /* Griglia Post / Recensioni Globali */
     .section-header {
       display: flex;
       justify-content: space-between;
@@ -171,116 +223,44 @@
       padding-bottom: 0.8rem;
     }
     .section-header h2 { color: var(--text-white); font-size: 1.8rem; }
-    
-    /* Toolbar Ricerca & Filtri */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .search-box {
-      flex: 1;
-      min-width: 240px;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0 1rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-    }
-    .search-box input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--text-white);
-      padding: 0.6rem 0;
-    }
-    .toolbar select, .filter-btn {
-      padding: 0.6rem 1rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-white);
-      cursor: pointer;
-    }
-    .filter-btn.active { border-color: var(--orange); color: var(--orange); }
 
-    /* Griglia Film Diario */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1.5rem;
-    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
     .movie-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      transition: transform 0.2s, border-color 0.2s;
       cursor: pointer;
+      transition: transform 0.2s;
     }
-    .movie-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--blue);
-    }
-    .poster-img {
-      width: 100%;
-      height: 280px;
-      object-fit: cover;
-      background: #222;
-    }
-    
-    .movie-info {
-      padding: 0.8rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      flex-grow: 1;
-    }
+    .movie-card:hover { transform: translateY(-5px); border-color: var(--blue); }
+    .poster-img { width: 100%; height: 280px; object-fit: cover; }
+    .movie-info { padding: 0.9rem; display: flex; flex-direction: column; gap: 0.4rem; flex-grow: 1; }
     .movie-title { color: var(--text-white); font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .movie-rating { color: var(--green); font-size: 0.85rem; font-weight: 700; }
     .movie-review-snippet { font-size: 0.8rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    
-    .movie-card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 0.6rem;
-      margin-top: auto;
-      border-top: 1px solid var(--border);
-      font-size: 0.75rem;
-    }
-    .action-icon-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.1rem;
-      color: var(--text);
-    }
-    .action-icon-btn.liked { color: var(--orange); }
+    .movie-author { font-size: 0.72rem; color: var(--blue); margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border); }
 
     /* Modali */
     dialog {
-      background: var(--surface);
+      background: var(--surface-light);
       color: var(--text-white);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 2rem;
-      width: min(600px, 92vw);
+      width: min(500px, 92vw);
       margin: auto;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      animation: fadeUp 0.3s ease;
     }
-    dialog::backdrop { background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
     .modal-close { background: none; border: none; color: var(--text); font-size: 1.8rem; cursor: pointer; }
-    
+
     .search-results-container {
-      max-height: 350px;
+      max-height: 320px;
       overflow-y: auto;
       margin-top: 1rem;
       display: flex;
@@ -296,7 +276,6 @@
       border-radius: 6px;
       cursor: pointer;
       border: 1px solid var(--border);
-      transition: border-color 0.2s;
     }
     .search-result-item:hover { border-color: var(--green); }
     .search-result-item img { width: 45px; height: 65px; object-fit: cover; border-radius: 4px; }
@@ -324,14 +303,7 @@
     }
     .submit-btn:hover { background: var(--green-hover); }
 
-    footer {
-      background: #101418;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      padding: 2.5rem 1rem;
-      margin-top: 4rem;
-      font-size: 0.85rem;
-    }
+    footer { background: #0a0d10; border-top: 1px solid var(--border); text-align: center; padding: 2.5rem 1rem; margin-top: 4rem; font-size: 0.85rem; }
 
     @media (max-width: 850px) {
       .hero-stats { grid-template-columns: 1fr; }
@@ -354,57 +326,77 @@
       </a>
       <nav class="main-nav">
         <button class="nav-link active" onclick="switchTab('home')" id="nav-home">Home</button>
-        <button class="nav-link" onclick="switchTab('diary')" id="nav-diary">Diario</button>
-        <button class="nav-link" onclick="switchTab('movies')" id="nav-movies">Film</button>
-        <button class="nav-link" onclick="switchTab('watchlist')" id="nav-watchlist">Watchlist</button>
+        <button class="nav-link" onclick="switchTab('community')" id="nav-community">Feed Community</button>
+        <button class="nav-link" onclick="switchTab('myreviews')" id="nav-myreviews">I Miei Film</button>
       </nav>
-      <button class="btn-log" onclick="openSearchModal()">
-        <span>+</span> LOG FILM
-      </button>
+      <div class="header-actions">
+        <button class="btn-log" onclick="openSearchModal()">+ LOG FILM</button>
+        <div id="authContainer">
+          <button class="btn-auth-nav" onclick="openAuthModal()">Accedi</button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Contenuto Principale Dinamico -->
-  <main class="container" id="main-container">
-    <!-- Iniettato via JavaScript -->
-  </main>
+  <!-- Container Principale -->
+  <main class="container" id="main-container"></main>
 
-  <!-- Footer -->
   <footer>
-    <p>CineBoxd Pro — Dati dei film forniti da <strong>TMDB</strong>.</p>
-    <p>© 2026 Tutti i diritti riservati</p>
+    <p>CineBoxd Pro — Social network per cinefili basato su TMDB e Firebase Cloud.</p>
   </footer>
 
-  <!-- Modal di Ricerca Globale TMDB -->
+  <!-- Modal Autenticazione (Login / Registrazione) -->
+  <dialog id="authModal">
+    <div class="modal-header">
+      <h2 id="authTitle">Accedi a CineBoxd</h2>
+      <button class="modal-close" onclick="document.getElementById('authModal').close()">&times;</button>
+    </div>
+    <form id="authForm" onsubmit="handleAuthSubmit(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="tu@email.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="submit-btn" id="authSubmitBtn">Accedi</button>
+      <p style="text-align: center; margin-top: 1rem; font-size: 0.85rem;">
+        <span id="authToggleText">Non hai un account?</span> 
+        <a href="#" onclick="toggleAuthMode()" style="color: var(--green); text-decoration: none; font-weight: bold;">Registrati</a>
+      </p>
+    </form>
+  </dialog>
+
+  <!-- Modal Ricerca TMDB -->
   <dialog id="searchModal">
     <div class="modal-header">
       <h2>Cerca un film nel Database Mondiale</h2>
       <button class="modal-close" onclick="document.getElementById('searchModal').close()">&times;</button>
     </div>
     <div class="form-group">
-      <input type="text" id="tmdbSearchInput" placeholder="Digita il titolo (es. Avatar, Interstellar, Il Padrino)..." oninput="searchTMDB(this.value)">
+      <input type="text" id="tmdbSearchInput" placeholder="Titolo film (es. Interstellar, Avatar)..." oninput="searchTMDB(this.value)">
     </div>
     <div class="search-results-container" id="searchResults">
-      <p style="color: var(--text); text-align:center; padding: 1rem;">Inizia a digitare per cercare tra milioni di film reali...</p>
+      <p style="color: var(--text); text-align:center; padding: 1rem;">Inizia a digitare...</p>
     </div>
   </dialog>
 
-  <!-- Modal Recensione / Salvataggio nel Diario -->
+  <!-- Modal Log Film -->
   <dialog id="logModal">
     <div class="modal-header">
-      <h2 id="logModalTitle">Aggiungi al Diario</h2>
+      <h2 id="logModalTitle">Condividi Recensione</h2>
       <button class="modal-close" onclick="document.getElementById('logModal').close()">&times;</button>
     </div>
-    <form id="logForm" onsubmit="saveMovieToDiary(event)">
+    <form id="logForm" onsubmit="saveMovieToCloud(event)">
       <input type="hidden" id="modalMovieId">
       <input type="hidden" id="modalMovieTitle">
       <input type="hidden" id="modalMoviePoster">
       <input type="hidden" id="modalMovieYear">
-      <input type="hidden" id="modalMovieGenre">
 
       <div class="form-row">
         <div class="form-group">
-          <label>Valutazione (1-5 stelle) *</label>
+          <label>Valutazione *</label>
           <select id="inputRating">
             <option value="5">★★★★★ (5/5)</option>
             <option value="4">★★★★☆ (4/5)</option>
@@ -414,47 +406,98 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Data di visione *</label>
+          <label>Data *</label>
           <input type="date" id="inputDate" required>
         </div>
       </div>
       <div class="form-group">
-        <label>La tua recensione / note</label>
-        <textarea id="inputReview" rows="3" placeholder="Scrivi cosa ti è piaciuto..."></textarea>
+        <label>La tua recensione pubblica</label>
+        <textarea id="inputReview" rows="3" placeholder="Scrivi cosa ne pensi per la community..."></textarea>
       </div>
-      <div class="form-row" style="align-items: center; margin-top: 0.5rem;">
-        <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer;">
-          <input type="checkbox" id="inputFavorite" style="width:auto;"> Aggiungi ai Preferiti (♥)
-        </label>
-        <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer;">
-          <input type="checkbox" id="inputWatchlist" style="width:auto;"> Salva in Watchlist
-        </label>
-      </div>
-      <button type="submit" class="submit-btn">Salva nel Profilo</button>
+      <button type="submit" class="submit-btn">Pubblica sul Cloud Globale</button>
     </form>
   </dialog>
 
-  <!-- Modal Dettaglio Film -->
-  <dialog id="detailModal">
-    <div class="modal-header">
-      <h2 id="detailTitle">Titolo</h2>
-      <button class="modal-close" onclick="document.getElementById('detailModal').close()">&times;</button>
-    </div>
-    <div id="detailContent"></div>
-  </dialog>
-
+  <!-- Script principale della logica dell'app -->
   <script>
     const TMDB_API_KEY = '63a7dbdd148130c66875753382f32bd4';
     const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-    let appData = JSON.parse(localStorage.getItem('cineboxd_pro_data')) || [];
+    let currentUser = null;
+    let globalReviews = [];
     let currentTab = 'home';
-    let searchQuery = '';
-    let selectedGenre = 'tutti';
-    let onlyFavorites = false;
+    let isRegistering = false;
 
-    function saveData() {
-      localStorage.setItem('cineboxd_pro_data', JSON.stringify(appData));
+    // Monitoraggio stato utente Firebase
+    setTimeout(() => {
+      window.fbMethods.onAuthStateChanged(window.firebaseAuth, (user) => {
+        currentUser = user;
+        updateAuthUI();
+        loadCloudReviews();
+      });
+    }, 1000);
+
+    function updateAuthUI() {
+      const container = document.getElementById('authContainer');
+      if (currentUser) {
+        container.innerHTML = `
+          <span class="user-badge">${currentUser.email.split('@')[0]}</span>
+          <button class="btn-auth-nav" onclick="logoutUser()">Esci</button>
+        `;
+      } else {
+        container.innerHTML = `<button class="btn-auth-nav" onclick="openAuthModal()">Accedi</button>`;
+      }
+    }
+
+    function openAuthModal() {
+      document.getElementById('authModal').showModal();
+    }
+
+    function toggleAuthMode() {
+      isRegistering = !isRegistering;
+      document.getElementById('authTitle').textContent = isRegistering ? 'Registrati a CineBoxd' : 'Accedi a CineBoxd';
+      document.getElementById('authSubmitBtn').textContent = isRegistering ? 'Crea Account' : 'Accedi';
+      document.getElementById('authToggleText').textContent = isRegistering ? 'Hai già un account?' : "Non hai un account?";
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value;
+      const pass = document.getElementById('authPassword').value;
+      try {
+        if (isRegistering) {
+          await window.fbMethods.createUserWithEmailAndPassword(window.firebaseAuth, email, pass);
+          alert("Registrazione completata con successo!");
+        } else {
+          await window.fbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+          alert("Accesso effettuato!");
+        }
+        document.getElementById('authModal').close();
+        document.getElementById('authForm').reset();
+      } catch (err) {
+        alert("Errore Autenticazione: " + err.message);
+      }
+    }
+
+    async function logoutUser() {
+      await window.fbMethods.signOut(window.firebaseAuth);
+      alert("Logout eseguito.");
+      renderApp();
+    }
+
+    // Carica recensioni globali da Firestore Cloud
+    async function loadCloudReviews() {
+      try {
+        const q = window.fbMethods.query(window.fbMethods.collection(window.firebaseDb, "reviews"), window.fbMethods.orderBy("createdAt", "desc"));
+        const querySnapshot = await window.fbMethods.getDocs(q);
+        globalReviews = [];
+        querySnapshot.forEach((docSnap) => {
+          globalReviews.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        renderApp();
+      } catch (e) {
+        console.error("Errore caricamento database cloud:", e);
+      }
     }
 
     function switchTab(tab) {
@@ -465,71 +508,58 @@
       renderApp();
     }
 
-    async function renderApp() {
+    function renderApp() {
       const container = document.getElementById('main-container');
       
       if (currentTab === 'home') {
-        const loggedCount = appData.filter(m => m.logged).length;
-        const watchCount = appData.filter(m => m.watchlist).length;
+        const myCount = currentUser ? globalReviews.filter(m => m.userEmail === currentUser.email).length : 0;
         
         container.innerHTML = `
           <section class="hero-stats">
             <div class="hero-text">
-              <p style="color:var(--green); text-transform:uppercase; font-size:0.75rem; font-weight:800; letter-spacing:0.15em; margin-bottom:0.5rem;">Social Cinema Tracker</p>
-              <h1>Traccia film, scrivi recensioni e condividi la tua <span>passione.</span></h1>
-              <p>Il tuo spazio personale per catalogare ogni visione cinematografica con valutazioni in stelle e note dettagliate.</p>
-              <button class="btn-log" onclick="openSearchModal()" style="padding:0.7rem 1.5rem; font-size:0.95rem;">+ Registra un film ora</button>
+              <p style="color:var(--green); text-transform:uppercase; font-size:0.75rem; font-weight:800; letter-spacing:0.15em; margin-bottom:0.5rem;">Social Cinema Network</p>
+              <h1>Condividi le tue recensioni con la <span>community globale.</span></h1>
+              <p>Esplora i film del momento, scrivi cosa ne pensi e leggi le valutazioni degli altri cinefili in tempo reale.</p>
+              <button class="btn-log" onclick="openSearchModal()">+ Registra e Condividi un Film</button>
             </div>
             <div class="stats-card">
               <div class="stat-item">
-                <span class="number">${loggedCount}</span>
-                <span class="label">Film Visti</span>
+                <span class="number">${globalReviews.length}</span>
+                <span class="label">Recensioni Totali</span>
               </div>
               <div class="stat-item">
-                <span class="number">${watchCount}</span>
-                <span class="label">Watchlist</span>
+                <span class="number">${myCount}</span>
+                <span class="label">I tuoi Film</span>
               </div>
             </div>
           </section>
 
-          <!-- Cataloghi TMDB automatici -->
           <div class="catalog-section">
-            <div class="catalog-title">🔥 Tendenti della Settimana</div>
-            <div class="catalog-row" id="trending-catalog">Caricamento film in corso...</div>
+            <div class="catalog-title">🔥 Tendenti della Settimana (TMDB)</div>
+            <div class="catalog-row" id="trending-catalog">Caricamento...</div>
           </div>
 
-          <div class="catalog-section">
-            <div class="catalog-title">🌟 I Più Votati di Sempre</div>
-            <div class="catalog-row" id="top-rated-catalog">Caricamento film in corso...</div>
-          </div>
-
-          ${renderMovieSection("Il tuo Diario Recente", appData.filter(m => m.logged))}
+          ${renderReviewSection("Ultimi Film Recensiti dalla Community", globalReviews.slice(0, 8))}
         `;
-
         loadHomeCatalogs();
 
-      } else if (currentTab === 'diary') {
-        container.innerHTML = renderMovieSection("Il mio Diario di Visione", appData.filter(m => m.logged));
-      } else if (currentTab === 'movies') {
-        container.innerHTML = renderMovieSection("Tutti i Film Archiviati", appData);
-      } else if (currentTab === 'watchlist') {
-        container.innerHTML = renderMovieSection("La mia Watchlist (Da Vedere)", appData.filter(m => m.watchlist));
+      } else if (currentTab === 'community') {
+        container.innerHTML = renderReviewSection("Feed Globale della Community", globalReviews);
+      } else if (currentTab === 'myreviews') {
+        if (!currentUser) {
+          container.innerHTML = `<div style="text-align:center; padding:4rem 0;"><h3>Effettua l'accesso per visualizzare i tuoi film salvati nel cloud.</h3></div>`;
+          return;
+        }
+        const userList = globalReviews.filter(m => m.userEmail === currentUser.email);
+        container.innerHTML = renderReviewSection("I Film recensiti da te", userList);
       }
-      
-      attachToolbarListeners();
     }
 
-    /* Carica i film da TMDB per la Home */
     async function loadHomeCatalogs() {
-      fetchCatalog('trending/movie/week', 'trending-catalog');
-      fetchCatalog('movie/top_rated', 'top-rated-catalog');
-    }
-
-    async function fetchCatalog(endpoint, containerId) {
       try {
-        const res = await fetch(`https://api.themoviedb.org/3/${endpoint}?api_key=${TMDB_API_KEY}&language=it-IT&page=1`);
+        const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${TMDB_API_KEY}&language=it-IT&page=1`);
         const data = await res.json();
-        const container = document.getElementById(containerId);
+        const container = document.getElementById('trending-catalog');
         if(!container) return;
         
         container.innerHTML = '';
@@ -551,148 +581,61 @@
             id: movie.id.toString(),
             title: movie.title,
             year: year,
-            poster: movie.poster_path,
-            genre: 'Film'
+            poster: movie.poster_path
           });
           container.appendChild(card);
         });
-      } catch(e) {
-        console.error(e);
-      }
+      } catch(e) { console.error(e); }
     }
 
-    function renderMovieSection(title, list) {
-      let filtered = list.filter(m => {
-        const matchText = m.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchGenre = selectedGenre === 'tutti' || m.genre === selectedGenre;
-        const matchFav = !onlyFavorites || m.favorite;
-        return matchText && matchGenre && matchFav;
-      });
-
+    function renderReviewSection(title, list) {
       let html = `
         <div class="section-header">
           <h2>${title}</h2>
-          <span style="font-size: 0.9rem; color: var(--text);">${filtered.length} titoli</span>
-        </div>
-
-        <div class="toolbar">
-          <div class="search-box">
-            <span>⌕</span>
-            <input type="search" id="searchInput" placeholder="Cerca titolo nei tuoi film..." value="${searchQuery}" autocomplete="off">
-          </div>
-          <select id="genreSelect">
-            <option value="tutti" ${selectedGenre === 'tutti' ? 'selected' : ''}>Tutti i generi</option>
-            <option value="Fantascienza" ${selectedGenre === 'Fantascienza' ? 'selected' : ''}>Fantascienza</option>
-            <option value="Drammatico" ${selectedGenre === 'Drammatico' ? 'selected' : ''}>Drammatico</option>
-            <option value="Azione" ${selectedGenre === 'Azione' ? 'selected' : ''}>Azione</option>
-            <option value="Thriller" ${selectedGenre === 'Thriller' ? 'selected' : ''}>Thriller</option>
-            <option value="Commedia" ${selectedGenre === 'Commedia' ? 'selected' : ''}>Commedia</option>
-          </select>
-          <button class="filter-btn ${onlyFavorites ? 'active' : ''}" id="favFilterBtn">
-            ${onlyFavorites ? '♥ Tutti' : '♥ Preferiti'}
-          </button>
+          <span style="font-size: 0.9rem; color: var(--text);">${list.length} recensioni</span>
         </div>
       `;
 
-      if (filtered.length === 0) {
-        html += `
-          <div style="text-align: center; padding: 3rem 1rem; color: var(--text);">
-            <h3 style="color:var(--text-white); font-size:1.3rem; margin-bottom:0.5rem;">Nessun film salvato</h3>
-            <p>Seleziona un film dai cataloghi in alto oppure premi <strong>+ LOG FILM</strong>!</p>
-          </div>
-        `;
+      if (list.length === 0) {
+        html += `<div style="text-align: center; padding: 3rem 0; color: var(--text);"><p>Nessuna recensione trovata.</p></div>`;
       } else {
         html += `<div class="grid">`;
-        filtered.forEach(m => {
+        list.forEach(m => {
           html += `
-            <div class="movie-card" onclick="openDetail('${m.id}')">
-              <img class="poster-img" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/200x300?text=No+Poster'}" alt="${m.title}">
+            <div class="movie-card">
+              <img class="poster-img" src="${m.poster ? IMAGE_BASE_URL + m.poster : 'https://via.placeholder.com/200x300'}" alt="${m.title}">
               <div class="movie-info">
-                <div class="movie-title" title="${m.title}">${m.title}</div>
-                <div class="movie-rating">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)} <span>(${m.rating}/5)</span></div>
-                <p class="movie-review-snippet">${m.review || 'Nessuna nota inserita.'}</p>
-                <div class="movie-card-footer">
-                  <span style="font-size:0.75rem; color:var(--text);">${m.logged ? 'Visto il ' + m.date : 'In Watchlist'}</span>
-                  <button class="action-icon-btn ${m.favorite ? 'liked' : ''}" onclick="event.stopPropagation(); toggleFavorite('${m.id}')">
-                    ${m.favorite ? '♥' : '♡'}
-                  </button>
-                </div>
+                <div class="movie-title">${m.title} (${m.year})</div>
+                <div class="movie-rating">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>
+                <p class="movie-review-snippet">${m.review || 'Nessuna nota.'}</p>
+                <div class="movie-author">Utente: ${m.userEmail ? m.userEmail.split('@')[0] : 'Anonimo'}</div>
               </div>
             </div>
           `;
         });
         html += `</div>`;
       }
-
       return html;
     }
 
-    function attachToolbarListeners() {
-      const sInput = document.getElementById('searchInput');
-      if (sInput) {
-        sInput.addEventListener('input', (e) => {
-          searchQuery = e.target.value;
-          refreshGridOnly();
-        });
-      }
-      const gSelect = document.getElementById('genreSelect');
-      if (gSelect) {
-        gSelect.addEventListener('change', (e) => {
-          selectedGenre = e.target.value;
-          renderApp();
-        });
-      }
-      const fBtn = document.getElementById('favFilterBtn');
-      if (fBtn) {
-        fBtn.addEventListener('click', () => {
-          onlyFavorites = !onlyFavorites;
-          renderApp();
-        });
-      }
-    }
-
-    function refreshGridOnly() {
-      const activeSearchVal = document.getElementById('searchInput').value;
-      searchQuery = activeSearchVal;
-      const scrollPos = window.scrollY;
-      renderApp();
-      document.getElementById('searchInput').focus();
-      document.getElementById('searchInput').setSelectionRange(activeSearchVal.length, activeSearchVal.length);
-      window.scrollTo(0, scrollPos);
-    }
-
-    function toggleFavorite(id) {
-      const movie = appData.find(m => m.id === id);
-      if (movie) {
-        movie.favorite = !movie.favorite;
-        saveData();
-        renderApp();
-      }
-    }
-
-    /* Gestione Ricerca TMDB */
     function openSearchModal() {
+      if (!currentUser) {
+        alert("Devi effettuare l'accesso per poter registrare e pubblicare recensioni!");
+        openAuthModal();
+        return;
+      }
       document.getElementById('tmdbSearchInput').value = '';
-      document.getElementById('searchResults').innerHTML = '<p style="color: var(--text); text-align:center; padding: 1rem;">Inizia a digitare il titolo di un film...</p>';
+      document.getElementById('searchResults').innerHTML = '<p style="color: var(--text); text-align:center; padding: 1rem;">Digita il titolo...</p>';
       document.getElementById('searchModal').showModal();
     }
 
     async function searchTMDB(query) {
-      if (!query.trim()) {
-        document.getElementById('searchResults').innerHTML = '';
-        return;
-      }
+      if (!query.trim()) return;
       try {
         const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
         const data = await res.json();
-        
         const resultsContainer = document.getElementById('searchResults');
         resultsContainer.innerHTML = '';
-
-        if (!data.results || data.results.length === 0) {
-          resultsContainer.innerHTML = '<p style="color: var(--text); text-align:center; padding: 1rem;">Nessun film trovato su TMDB.</p>';
-          return;
-        }
 
         data.results.forEach(movie => {
           const year = movie.release_date ? movie.release_date.split('-')[0] : '';
@@ -701,98 +644,50 @@
           const item = document.createElement('div');
           item.className = 'search-result-item';
           item.innerHTML = `
-            <img src="${poster || 'https://via.placeholder.com/45x65?text=No'}" alt="">
+            <img src="${poster || 'https://via.placeholder.com/45x65'}" alt="">
             <div>
-              <strong style="color:var(--text-white); font-size:0.95rem;">${movie.title}</strong>
+              <strong style="color:var(--text-white);">${movie.title}</strong>
               <p style="font-size:0.8rem; color:var(--text);">${year}</p>
             </div>
           `;
-          item.onclick = () => selectMovieFromSearch({
-            id: movie.id.toString(),
-            title: movie.title,
-            year: year,
-            poster: movie.poster_path,
-            genre: 'Film'
-          });
+          item.onclick = () => {
+            document.getElementById('searchModal').close();
+            document.getElementById('modalMovieTitle').value = movie.title;
+            document.getElementById('modalMoviePoster').value = movie.poster_path || '';
+            document.getElementById('modalMovieYear').value = year;
+            document.getElementById('inputDate').valueAsDate = new Date();
+            document.getElementById('logModal').showModal();
+          };
           resultsContainer.appendChild(item);
         });
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    function selectMovieFromSearch(movie) {
-      if(document.getElementById('searchModal').open) {
-        document.getElementById('searchModal').close();
-      }
-      document.getElementById('modalMovieId').value = movie.id;
-      document.getElementById('modalMovieTitle').value = movie.title;
-      document.getElementById('modalMoviePoster').value = movie.poster;
-      document.getElementById('modalMovieYear').value = movie.year;
-      document.getElementById('modalMovieGenre').value = movie.genre;
-      document.getElementById('inputDate').valueAsDate = new Date();
-      
-      document.getElementById('logModalTitle').textContent = `Logga: ${movie.title} (${movie.year})`;
-      document.getElementById('logModal').showModal();
-    }
-
-    function saveMovieToDiary(e) {
+    async function saveMovieToCloud(e) {
       e.preventDefault();
-      const isWatchlist = document.getElementById('inputWatchlist').checked;
-      
-      const newMovie = {
-        id: Date.now().toString(),
+      if (!currentUser) return;
+
+      const newReview = {
         title: document.getElementById('modalMovieTitle').value,
-        genre: document.getElementById('modalMovieGenre').value || 'Film',
-        year: parseInt(document.getElementById('modalMovieYear').value) || 2026,
+        year: document.getElementById('modalMovieYear').value,
         poster: document.getElementById('modalMoviePoster').value,
         rating: parseInt(document.getElementById('inputRating').value),
         date: document.getElementById('inputDate').value,
         review: document.getElementById('inputReview').value,
-        favorite: document.getElementById('inputFavorite').checked,
-        watchlist: isWatchlist,
-        logged: !isWatchlist
+        userEmail: currentUser.email,
+        createdAt: Date.now()
       };
 
-      appData.unshift(newMovie);
-      saveData();
-      document.getElementById('logModal').close();
-      document.getElementById('logForm').reset();
-      renderApp();
-    }
-
-    function openDetail(id) {
-      const movie = appData.find(m => m.id === id);
-      if (!movie) return;
-
-      document.getElementById('detailTitle').textContent = `${movie.title} (${movie.year})`;
-      document.getElementById('detailContent').innerHTML = `
-        <p style="color: var(--green); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">
-          ${'★'.repeat(movie.rating)}${'☆'.repeat(5 - movie.rating)} (${movie.rating}/5)
-        </p>
-        <p style="font-size: 0.85rem; color: var(--text); margin-bottom: 1rem;">
-          Genere: <strong>${movie.genre || 'Film'}</strong> | ${movie.logged ? 'Visto il: ' + movie.date : 'Stato: In Watchlist'}
-        </p>
-        <p style="background: var(--bg); padding: 1rem; border-radius: 6px; border: 1px solid var(--border); line-height: 1.6; margin-bottom: 1.5rem;">
-          ${movie.review || 'Nessuna recensione testuale inserita per questo film.'}
-        </p>
-        <div style="display: flex; gap: 1rem;">
-          <button class="submit-btn" style="background: #303840; color: white;" onclick="deleteMovie('${movie.id}')">Elimina dal diario</button>
-        </div>
-      `;
-      document.getElementById('detailModal').showModal();
-    }
-
-    function deleteMovie(id) {
-      if (confirm('Vuoi davvero eliminare questo titolo dal tuo diario?')) {
-        appData = appData.filter(m => m.id !== id);
-        saveData();
-        document.getElementById('detailModal').close();
-        renderApp();
+      try {
+        await window.fbMethods.addDoc(window.fbMethods.collection(window.firebaseDb, "reviews"), newReview);
+        document.getElementById('logModal').close();
+        document.getElementById('logForm').reset();
+        alert("Recensione pubblicata sul cloud con successo!");
+        loadCloudReviews();
+      } catch (err) {
+        alert("Errore durante il salvataggio: " + err.message);
       }
     }
-
-    renderApp();
   </script>
 </body>
 </html>
