@@ -6,29 +6,26 @@
   <meta name="description" content="CineBoxd Pro - Social Network per Cinefili">
   <title>CineBoxd Pro - Social & Cloud</title>
   
-  <!-- Firebase SDKs (Modulari compatibili con script tag) -->
+  <!-- Firebase SDKs allineati alla versione 13.2.0 -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
-    // La tua configurazione Firebase estratta dallo screenshot
     const firebaseConfig = {
-      apiKey: "AIzaSyAfX78JhLPW5D2rvasQjWObB4mSEFAemcQ",
+      apiKey: "AIzaSyAfx78JhLPW5D2rvasQjWObB4mSEFAemcQ",
       authDomain: "cineboxd-social.firebaseapp.com",
       projectId: "cineboxd-social",
-      storageBucket: "cineboxd-social.appspot.com",
+      storageBucket: "cineboxd-social.firebasestorage.app",
       messagingSenderId: "105455749646",
       appId: "1:105455749646:web:a73453b237d09f9588a5f",
       measurementId: "G-VW9C77S7PP"
     };
 
-    // Inizializzazione Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Rendiamo globali le funzioni Firebase per gestirle nei pulsanti HTML
     window.firebaseAuth = auth;
     window.firebaseDb = db;
     window.fbMethods = {
@@ -40,9 +37,7 @@
       addDoc,
       getDocs,
       query,
-      orderBy,
-      deleteDoc,
-      doc
+      orderBy
     };
   </script>
 
@@ -159,7 +154,7 @@
       padding: 0.4rem 0.9rem;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.85srem;
+      font-size: 0.85rem;
     }
     .btn-auth-nav:hover { border-color: var(--text-white); }
 
